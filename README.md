@@ -51,7 +51,7 @@ CFB does use an IV. The length of the plaintext must be a multiple of the segmen
 
 OFB requires an IV that may only be used once for a given key. The length of the plaintext is not required to be a multiple of the block size.
 
-$#### Counter Mode (CTR)
+##### Counter Mode (CTR)
 
 To do: add CTR description here.
 
