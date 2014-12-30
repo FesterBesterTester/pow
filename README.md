@@ -1,4 +1,4 @@
-# pwman - A Simple Interactive Password Manager
+# pow - A Simple Interactive Password Manager
 
 
 
