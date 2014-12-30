@@ -4,7 +4,12 @@
 
 ## Usage
 
-    Commands:
+This is an interactive command line tool written in python.
+
+    Usage:
+      pow.py [-f password_file]
+
+    Interactive Commands:
       d: delete user
       g: get password for a site/user
       s: set password for a site/user

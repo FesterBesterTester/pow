@@ -309,10 +309,20 @@ class UI:
 
 
 if __name__ == "__main__":
+  pwdb = 'pw.pow'
   while True:
     try:
+      if len(sys.argv) != 1:
+        if sys.argv[1] != '-f' and sys.argv[1] != '/f':
+          print('ERROR: Unrecognized option ' + sys.argv[1])
+          sys.exit(-1)
+        if len(sys.argv) != 3:
+          print('ERROR: -f option requires a filename')
+          sys.exit(-1)
+        pwdb = sys.argv[2]
+
       master = getpass('Mastr Passerd? ')
-      pwfile = PWFile('pw.txt', master)
+      pwfile = PWFile(pwdb, master)
       pwfile.check_password() # Throws PasswordError if wrong password
       ui = UI(pwfile)
       ui.help()
