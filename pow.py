@@ -28,6 +28,7 @@ For more information, please refer to <http://unlicense.org/>
 '''
 
 from __future__ import print_function
+import argparse
 from getpass import getpass
 import re
 import sys
@@ -309,17 +310,14 @@ class UI:
 
 
 if __name__ == "__main__":
-  pwdb = 'pw.pow'
   while True:
     try:
-      if len(sys.argv) != 1:
-        if sys.argv[1] != '-f' and sys.argv[1] != '/f':
-          print('ERROR: Unrecognized option ' + sys.argv[1])
-          sys.exit(-1)
-        if len(sys.argv) != 3:
-          print('ERROR: -f option requires a filename')
-          sys.exit(-1)
-        pwdb = sys.argv[2]
+      parser = argparse.ArgumentParser(description='A simple interactive password manager',
+                                       prefix_chars='-/')
+      parser.add_argument('-f', nargs=1, default=['pw.pow'], metavar='filename',
+                          help='specify file to use as password database (defaults to \'pw.pow\')')
+      args = parser.parse_args()
+      pwdb = args.f[0]
 
       master = getpass('Mastr Passerd? ')
       pwfile = PWFile(pwdb, master)
