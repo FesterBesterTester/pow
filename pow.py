@@ -202,20 +202,14 @@ class UI:
       print('No entries found for ' + site)
       return {}
 
-    print('User: ', end='')
-    user = unicode(sys.stdin.readline().strip(), 'utf-8')
-    if user not in db[site]:
-      print('No user ' + user + ' found for ' + site)
-      return {}
-
-    return db[site][user]
+    return db[site]
 
 
   def help(self):
     print('')
     print('Commands:')
     print('d: delete user')
-    print('g: get password for a site/user')
+    print('g: get passwords for a site')
     print('s: set password for a site/user')
     print('m: set mastr passerd')
     print('la: list all')
@@ -242,6 +236,16 @@ class UI:
       print(site)
 
 
+  def print_site_info(self):
+    print('==================')
+    site = ui.getPW().iteritems()
+    print('')
+    for user, info in site:
+      print('User: ' + user)
+      self.print_user_info(info, '')
+      print('')
+
+
   def print_user_info(self, user, prefix):
     if user:
       print(prefix + 'Pass: ' + user['pw'])
@@ -250,7 +254,7 @@ class UI:
 
   def process_command(self, cmd):
     commands = {'d': lambda: self.delete_user(),
-                'g': lambda: self.print_user_info(ui.getPW(), ''),
+                'g': lambda: self.print_site_info(),
                 's': lambda: self.setPW(),
                 'm': lambda: self.setMastr(),
                 'la': lambda: self.print_pass_info(),
