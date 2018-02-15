@@ -96,7 +96,7 @@ class EncryptedFile:
   def salt(self):
     '''
     The modular crypt format for bcrypt consists of
-      -  $2$, $2a$ or $2y$ identifying the hashing algorithm and format,
+      -  $2$, $2a$, $2b$, or $2y$ identifying the hashing algorithm and format,
       -  a two digit value denoting the cost parameter, followed by $
       -  a 53 characters long base-64-encoded value (they use the
          alphabet ., /, 0-9, A-Z, a-z that is different to the standard
@@ -118,7 +118,7 @@ class EncryptedFile:
         msg = f.read(29)
       if (len(msg) == 0):
         return ''
-      m = re.search('(\$[0-9][ay]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', msg)
+      m = re.search('(\$[0-9][ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', msg)
       return m.group(1)
     except IOError as e:
       raise

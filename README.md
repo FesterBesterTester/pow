@@ -21,7 +21,7 @@ This is an interactive command line tool written in python.
 
 ## Dependencies
  * pycrypto 2.6.1
- * py-bcrypt 0.4
+ * bcrypt 3.1.4 (versions older than 3.1.0 not recommended)
 
 ## Design Decisions
 
@@ -84,7 +84,7 @@ The file format is as follows:
 
 The first 28 or 29 bytes contain the bcrypt algorithm, format, and salt used with the master password. The format is the same as that returned from bcrypt.gensalt().
 
-* $2$, $2a$ or $2y$ identifying the hashing algorithm and format
+* $2$, $2a$, $2b$, or $2y$ identifying the hashing algorithm and format
 * a two digit value denoting the cost parameter, followed by $
 * 22 characters of salt (effectively only 128 bits of the 132
               decoded bits)
