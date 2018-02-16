@@ -272,13 +272,14 @@ class UI:
 
 
   def getPW(self):
+    print('Site: ', end='')
+    site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
+
     db = self.pwfile.read()
     if db == {}:
       print('No passwords found')
       return {}
 
-    print('Site: ', end='')
-    site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
     if site not in db:
       print('No entries found for ' + site)
       return {}
@@ -365,13 +366,11 @@ class UI:
 
 
   def setPW(self):
-    # {site: {user: {'pw': pw, 'note': note}, user2: {'pw': pw2, 'note': note2}}}
-    db = self.pwfile.read()
-
     print('Site: ', end='')
     site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
     print('Username: ', end='')
     user = unicode(sys.stdin.readline().strip(), 'utf-8')
+
     while True:
       pw = getpass('Password: ')
       pw2 = getpass('Re-enter Password: ')
@@ -380,6 +379,9 @@ class UI:
       print('Passwords don\'t match')
     print('Note: ', end='')
     note = unicode(sys.stdin.readline().strip(), 'utf-8')
+
+    # {site: {user: {'pw': pw, 'note': note}, user2: {'pw': pw2, 'note': note2}}}
+    db = self.pwfile.read()
 
     if site not in db: 
       db[site] = {user: {'pw': pw, 'note': note}}
