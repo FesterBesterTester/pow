@@ -62,6 +62,9 @@ class EncryptedFile:
 
 
   def hash(self, salt=''):
+    '''
+    Returns a salted hash of the password.
+    '''
     if salt == '':
       salt = bcrypt.gensalt(self.BCRYPT_WORK_FACTOR)
     hashed = bcrypt.hashpw(self.passwd, salt)
@@ -69,6 +72,32 @@ class EncryptedFile:
 
 
   def read(self):
+    '''
+    Returns decrypted contents of the file. Throws PasswordError if the
+    password is incorrect.
+    '''
+
+    # The file format is as follows:
+    #
+    #   +-----------------------------------------------------------+
+    #   |  $<bcrypt alg/format>$<bcrypt cost param>$<bcrypt salt>   |
+    #   |    1 or 2 characters  |  2 characters    | 22 characters  |
+    #   +---+---------------------------------------------------+---+
+    #   | A |                  SHA256 of payload                | A |
+    #   | E +---------------------------------------------------+ E |
+    #   | S |                                                   | S |
+    #   |   |                                                   |   |
+    #   | E |                                                   | E |
+    #   | N |                                                   | N |
+    #   | C |                                                   | C |
+    #   | R |                      payload                      | R |
+    #   | Y |                                                   | Y |
+    #   | P |                                                   | P |
+    #   | T |                                                   | T |
+    #   | E |                                                   | E |
+    #   | D |                                                   | D |
+    #   +---+---------------------------------------------------+---+
+
     # look for salt in existing encrypted file
     try:
       salt = self.salt()
@@ -86,6 +115,11 @@ class EncryptedFile:
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(hashed['hashed_passwd'], AES.MODE_CFB, iv)
     decrypted_msg = cipher.decrypt(msg[len(salt):])[len(iv):]
+
+    # The correctness of the password supplied for decryption can be determined
+    # by comparing the included SHA256 with the SHA256 of the decrypted payload.
+    # If they match, the password is correct.
+
     digest_size = SHA256.new().digest_size
     sha = decrypted_msg[0:digest_size]
     if sha != SHA256.new(decrypted_msg[digest_size:]).digest():
@@ -95,7 +129,12 @@ class EncryptedFile:
 
   def salt(self):
     '''
-    The modular crypt format for bcrypt consists of
+    This function reads and returns the first 28 or 29 bytes from the beginning
+    of the encrypted file. These bytes contain the hashing algorithm and format
+    (2, 2a, or 2y), the 2 digit cost, and the salt. These bytes are identical
+    in format to those returned from bcrypt.gensalt().
+
+     The modular crypt format for bcrypt consists of
       -  $2$, $2a$, $2b$, or $2y$ identifying the hashing algorithm and format,
       -  a two digit value denoting the cost parameter, followed by $
       -  a 53 characters long base-64-encoded value (they use the
@@ -107,31 +146,37 @@ class EncryptedFile:
               the 186 decoded bits)
 
     Thus the total length is 59 or 60 bytes respectively.
-
-    This function reads the first 28 or 29 bytes from the beginning of the
-    encrypted file. These bytes contain the hashing algorithm and format
-    (2, 2a, or 2y), the 2 digit cost, and the salt. These bytes are identical
-    in format to those returned from bcrypt.gensalt().
-    '''
+   '''
     try:
       with open(self.encrypted_file, 'r') as f:
         msg = f.read(29)
       if (len(msg) == 0):
         return ''
-      m = re.search('(\$[0-9][ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', msg)
+      m = re.search('(\$2[ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', msg)
       return m.group(1)
     except IOError as e:
       raise
 
 
   def set_password(self, old_password, new_password):
-    self.passwd = old_password
-    db = self.read() # throws PasswordError if incorrect pw
-    self.passwd = new_password
-    self.write(db)
+    '''
+    Changes the password. Throws PasswordError if old_password is incorrect.
+    '''
+    try:
+      orig_passwd = self.passwd
+      self.passwd = old_password
+      db = self.read() # throws PasswordError if incorrect pw
+      self.passwd = new_password
+      self.write(db)
+    except PasswordError as e:
+      self.passwd = orig_passwd
+      raise
 
 
   def write(self, msg):
+    '''
+    Encrypts msg and writes it to self.encrypted_file.
+    '''
     with open(self.encrypted_file, 'w') as f:
       hashed = self.hash()
       iv = Random.new().read(AES.block_size)
@@ -150,6 +195,36 @@ class PWFile(EncryptedFile):
   '''
 
   def read(self):
+    '''
+    Returns all site, user, and password info from the file as an object with
+    the following format.
+
+      {
+        "site1": {
+          "user1": {
+            "pw": "password",
+            "note": "note"
+          },
+          "user2": {
+            "pw": "password",
+            "note": "note"
+          }
+        },
+        "site2": {
+          "user1": {
+            "pw": "password",
+            "note": "note"
+          },
+          "user2": {
+            "pw": "password",
+            "note": "note"
+          }
+        },
+        ...
+      }
+
+    Throws PasswordError if the file cannot be decrypted.
+    '''
     decrypted_msg = EncryptedFile.read(self)
     if (len(decrypted_msg) == 0):
       return {}
@@ -160,6 +235,12 @@ class PWFile(EncryptedFile):
 
 
   def write(self, msg):
+    '''
+    Serializes site, user, and password info, then encrypts and writes it to
+    self.encrypted_file.
+
+    Throws UnicodeDecodeError if data cannot be serialized.
+    '''
     try:
       json_msg = json.dumps(msg)
       EncryptedFile.write(self, json_msg)
