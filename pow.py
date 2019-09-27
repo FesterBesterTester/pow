@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 '''
 This is free and unencumbered software released into the public domain.
@@ -27,7 +28,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org/>
 '''
 
-from __future__ import print_function
 import argparse
 from getpass import getpass
 import re
@@ -48,6 +48,7 @@ class PasswordError(ValueError):
 class EncryptedFile:
   # Subsequent integers require twice as much work to calculate a hash
   BCRYPT_WORK_FACTOR = 14
+  FILE_ENCODING = 'utf-8'
 
   def __init__(self, encrypted_file, passwd):
     self.encrypted_file = encrypted_file
@@ -66,9 +67,9 @@ class EncryptedFile:
     Returns a salted hash of the password.
     '''
     if salt == '':
-      salt = bcrypt.gensalt(self.BCRYPT_WORK_FACTOR)
-    hashed = bcrypt.hashpw(self.passwd, salt)
-    return {'full': hashed, 'hashed_passwd': hashed[-32:], 'salt': salt}
+      salt = bcrypt.gensalt(self.BCRYPT_WORK_FACTOR).decode(self.FILE_ENCODING)
+    hashed = bcrypt.hashpw(self.passwd.encode(self.FILE_ENCODING), salt.encode(self.FILE_ENCODING))
+    return {'full': hashed, 'hashed_passwd': hashed[-32:], 'salt': salt.encode(self.FILE_ENCODING)}
 
 
   def read(self):
@@ -101,13 +102,15 @@ class EncryptedFile:
     # look for salt in existing encrypted file
     try:
       salt = self.salt()
+    except FileNotFoundError:
+      return ''
     except IOError as e:
       if e[0] == 2: # errno 2 is file not found
         return ''
       raise
 
     hashed = self.hash(salt)
-    with open(self.encrypted_file, 'r') as f:
+    with open(self.encrypted_file, 'rb') as f:
       msg = f.read()
     if (len(msg) == 0):
       return ''
@@ -148,11 +151,11 @@ class EncryptedFile:
     Thus the total length is 59 or 60 bytes respectively.
    '''
     try:
-      with open(self.encrypted_file, 'r') as f:
+      with open(self.encrypted_file, 'rb') as f:
         msg = f.read(29)
       if (len(msg) == 0):
         return ''
-      m = re.search('(\$2[ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', msg)
+      m = re.search('(\$2[ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', str(msg, encoding=self.FILE_ENCODING))
       return m.group(1)
     except IOError as e:
       raise
@@ -177,11 +180,11 @@ class EncryptedFile:
     '''
     Encrypts msg and writes it to self.encrypted_file.
     '''
-    with open(self.encrypted_file, 'w') as f:
+    with open(self.encrypted_file, 'wb') as f:
       hashed = self.hash()
       iv = Random.new().read(AES.block_size)
       cipher = AES.new(hashed['hashed_passwd'], AES.MODE_CFB, iv)
-      encrypted_msg = iv + cipher.encrypt(SHA256.new(msg).digest() + msg)
+      encrypted_msg = iv + cipher.encrypt(SHA256.new(msg.encode(self.FILE_ENCODING)).digest() + msg.encode(self.FILE_ENCODING))
 
       f.write(hashed['salt'])
       f.write(encrypted_msg)
@@ -257,11 +260,11 @@ class UI:
   def delete_user(self):
     db = self.pwfile.read()
 
-    print('Site: ', end='')
-    site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
-    print('Username: ', end='')
-    user = unicode(sys.stdin.readline().strip(), 'utf-8')
-    print('Delete user ' + user + ' from site ' + site + '? y/n ', end='')
+    print('Site: ', end='', flush=True)
+    site = sys.stdin.readline().strip().lower()
+    print('Username: ', end='', flush=True)
+    user = sys.stdin.readline().strip()
+    print('Delete user ' + user + ' from site ' + site + '? y/n ', end='', flush=True)
     delete = sys.stdin.readline().strip()
 
     if delete == 'y':
@@ -272,8 +275,8 @@ class UI:
 
 
   def getPW(self):
-    print('Site: ', end='')
-    site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
+    print('Site: ', end='', flush=True)
+    site = sys.stdin.readline().strip().lower()
 
     db = self.pwfile.read()
     if db == {}:
@@ -303,10 +306,10 @@ class UI:
 
   def print_pass_info(self):
     info = self.pwfile.read()
-    for site in sorted(info.iterkeys()):
+    for site in sorted(info.keys()):
       print('==================')
       print(site + '\n')
-      for user in sorted(info[site].iterkeys()):
+      for user in sorted(info[site].keys()):
         print('  User: ' + user)
         self.print_user_info(info[site][user], '  ')
         print('')
@@ -314,13 +317,13 @@ class UI:
 
   def print_sites(self):
     print('==================')
-    for site in sorted(self.pwfile.read().iterkeys()):
+    for site in sorted(self.pwfile.read().keys()):
       print(site)
 
 
   def print_site_info(self):
     print('==================')
-    site = ui.getPW().iteritems()
+    site = ui.getPW().items()
     print('')
     for user, info in site:
       print('User: ' + user)
@@ -366,10 +369,10 @@ class UI:
 
 
   def setPW(self):
-    print('Site: ', end='')
-    site = unicode(sys.stdin.readline().strip().lower(), 'utf-8')
-    print('Username: ', end='')
-    user = unicode(sys.stdin.readline().strip(), 'utf-8')
+    print('Site: ', end='', flush=True)
+    site = sys.stdin.readline().strip().lower()
+    print('Username: ', end='', flush=True)
+    user = sys.stdin.readline().strip()
 
     while True:
       pw = getpass('Password: ')
@@ -377,8 +380,8 @@ class UI:
       if pw == pw2:
         break
       print('Passwords don\'t match')
-    print('Note: ', end='')
-    note = unicode(sys.stdin.readline().strip(), 'utf-8')
+    print('Note: ', end='', flush=True)
+    note = sys.stdin.readline().strip()
 
     # {site: {user: {'pw': pw, 'note': note}, user2: {'pw': pw2, 'note': note2}}}
     db = self.pwfile.read()
@@ -388,7 +391,7 @@ class UI:
     elif user not in db[site]:
       db[site][user] = {'pw': pw, 'note': note}
     else:
-      print(user + ' already exists. Update? y/n ', end='')
+      print(user + ' already exists. Update? y/n ', end='', flush=True)
       overwrite = sys.stdin.readline().strip()
       if overwrite == 'y':
         db[site][user] = {'pw': pw, 'note': note}
