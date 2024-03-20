@@ -155,7 +155,7 @@ class EncryptedFile:
         msg = f.read(29)
       if (len(msg) == 0):
         return ''
-      m = re.search('(\$2[ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', str(msg, encoding=self.FILE_ENCODING))
+      m = re.search(r'(\$2[ayb]{0,1}\$[0-9]{2}\$[\./0-9A-Za-z]{22})', str(msg, encoding=self.FILE_ENCODING))
       return m.group(1)
     except IOError as e:
       raise
